@@ -371,6 +371,48 @@ function istransparent( d::Diagram )
 end
 
 
+function ismostlytransparent( d::Diagram )
+# any single-column diagram is mostly transparent
+
+  if iszero( d.m ) return true end
+  if size( trimd(d.m) )[2]==1 return true end
+  if !isclear( d ) return false end
+
+  for k in descents(d)
+    if !ismostlytransparent(skop(d,k)) return false end
+  end
+
+  return true
+
+end
+
+# this version may be wonky, from Claude, but seems to work
+function generate_increasing_vectors(aa::Vector{Int})
+    # Check if all elements are positive
+    @assert all(a -> a > 0, aa) "All elements must be positive integers"
+    # Check if input vector is strictly increasing
+    @assert issorted(aa, lt=<) "Input vector must be strictly increasing"
+    
+    result = Vector{Int}[]
+    
+    function backtrack(current::Vector{Int}, index::Int, prev::Int)
+        if index > length(aa)
+            push!(result, copy(current))
+            return
+        end
+        
+        for i in (prev + 1):aa[index]
+            push!(current, i)
+            backtrack(current, index + 1, i)
+            pop!(current)
+        end
+    end
+    
+    backtrack(Int[], 1, 0)
+    
+    return result
+end
+
 
 function mult( d::Diagram, m::Int )
   b=repeat( d.m, inner=(1,m) )
@@ -394,6 +436,18 @@ function character( d::Diagram, R::ZZMPolyRing=xy_ring(size(d)[1]*size(d)[2])[1]
     return R(1)
   end
 
+  #
+  if size( trimd(d.m) )[2]==1 
+     dmt=reshape( trimd(d.m), : )
+     aa = findall( x->x==1, dmt )
+     return character(aa,R)
+  end
+  #
+
+  #
+  if !ismostlytransparent(d) println("warning: not mostly transparent") end
+  #
+
   des = descents( d )
 
   p1 = R(0)
@@ -413,6 +467,25 @@ function character( d::Diagram, R::ZZMPolyRing=xy_ring(size(d)[1]*size(d)[2])[1]
   end
 
   return p
+end
+
+
+function character( aa::Vector{Int}, R::ZZMPolyRing=xy_ring(maximum(aa))[1].ring )
+
+  exps = generate_increasing_vectors(aa)
+
+  p=R(0)
+  x=gens(R)
+  for bb in exps
+    tt=R(1)
+    for i in 1:length(bb)
+      tt = tt*x[bb[i]]
+    end
+    p = p + tt
+  end
+
+  return p
+    
 end
 
 
@@ -451,6 +524,49 @@ function Top( p::ZZMPolyRingElem, k::Int, R::ZZMPolyRing=parent(p) )
   return( p1/x[k] )
   
 end
+
+
+function mRop( p::ZZMPolyRingElem, k::Int, m::Int, R::ZZMPolyRing=parent(p) )
+
+  p1=p
+  for i in 1:m
+    p1=Rop(p1,k,R)
+  end
+
+  return p1
+
+end
+
+#=
+function mcharacter( d::Diagram, m::Int, R::ZZMPolyRing=xy_ring(m*m*size(d)[1]*size(d)[2])[1].ring )
+# not working, need to rethink recursion for m>1
+
+  if iszero( d.m )
+    return R(1)
+  end
+
+  des = descents( d )
+
+  p1 = R(0)
+
+  x = gens(R)
+
+  for k in des
+
+#       p1 = p1 + sum(x[m*(k-1)+1:m*k])*mRop( mcharacter( skop(d,k), m, R ), k+1, m, R )
+       p1 = p1 + x[m*(k-1)+1]*mRop( mcharacter( skop(d,k), m, R ), k+1, m, R )
+
+  end
+
+  p = p1
+  for k in 1:maxvar(p1)
+    p1 = mRop( p1, 1,m, R )
+    p = p + p1
+  end
+
+  return p
+end
+=#
 
 ########
 # test some guesses
