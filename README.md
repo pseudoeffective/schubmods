@@ -1,5 +1,5 @@
 # schubmods
-*julia code for Schubert and diagram modules
+*julia code for Schubert and diagram modules*
 
 This file provides methods for computing characters of Schur modules for diagrams.  The polynomials arising as such characters include the [Schubert polynomials](https://en.wikipedia.org/wiki/Schubert_polynomial) in the case the given diagram is the [Rothe diagram](https://en.wikipedia.org/wiki/Permutation#Numbering_permutations) of a permutation, and in particular [Schur polynomials](https://en.wikipedia.org/wiki/Schur_polynomial) as special cases.  
 
