@@ -90,3 +90,21 @@ julia> d11=skop(d1,1)
  □ . 
  . . 
 ```
+
+A diagram is *mostly transparent* if it satisfies a certain recursively defined property.  For mostly transparent diagrams, the function `character` computes the character of the corresponding flagged Schur module.
+```julia-repl
+julia> ismostlytransparent(d)
+true
+
+julia> character(d)
+x1^3 + x1^2*x2
+```
+If `d=Diagram(w)` is a Rothe diagram, a theorem of Kraskiewicz and Pragacz says its character is equal to a Schubert polynomial.  The ambient polynomial ring can be specified, which is useful when comparing polynomials obtained by different methods.
+```julia-repl
+julia> R,x,y=xy_ring(6);
+julia> Rx=R.ring;
+julia> pw = character(dw,Rx);
+julia> spw=schub_poly(w,R);
+julia> pw==spw
+true
+```
