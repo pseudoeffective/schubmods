@@ -1,7 +1,9 @@
-# Functions for Schubert modules and diagrams
+# Constructors and methods for Diagrams and Schubert modules
 #
 # Dave Anderson, July 2024
 
+
+############################
 
 mutable struct Diagram
 
@@ -10,12 +12,18 @@ mutable struct Diagram
 end
 
 
+######################################
+# Extend basic functions for Diagrams
+######################################
+
 function int_to_symb(i::Int8)
     symbols = ['.', "\u25A1",  # "□"
     ]
     return symbols[i+1]
 end
 
+
+# extend display for Diagram
 function Base.show(io::IO, d::Diagram)
     println(io)
     for i in 1:size(d.m, 1)
@@ -28,11 +36,24 @@ function Base.show(io::IO, d::Diagram)
     end
 end
 
+
+# define size of Diagram
 function Base.size( d::Diagram )
 
   return size( d.m )
 
 end
+
+
+# extend equality
+Base.:(==)( d1::Diagram, d2::Diagram ) = d1.m == d2.m
+
+  
+
+
+##################
+# Constructors
+##################
 
 function Diagram( b::Vector{Int8} )
 # if there is just one column, given as 01 vector
@@ -79,9 +100,6 @@ function cols2pos( cols::Vector{Vector{Int}} )
 
 end
 
-###
-# TO DO write inverse, pos2cols
-###
 
 function Diagram( cols::Vector{Vector{Int}} )
 # make diagram from list of columns
@@ -97,6 +115,17 @@ function Diagram( b::BPD )
 # make diagram from BPD, empty cells to boxes
 
   xys = findall( x->x==0, b.m )
+  pos = [ (xy[1],xy[2]) for xy in xys ]
+
+  return Diagram( pos )
+
+end
+
+
+function Diagram( dc::Drift )
+# make diagram from drift configuration
+
+  xys = findall( x->x==0, dc.m )
   pos = [ (xy[1],xy[2]) for xy in xys ]
 
   return Diagram( pos )
@@ -122,6 +151,19 @@ function random_diagram( a::Int, b::Int )
 end
 
 
+function mult( d::Diagram, r::Int )
+# repeat each column of d r times
+
+  b=repeat( d.m, inner=(1,r) )
+
+  return Diagram(b)
+
+end
+
+
+
+##########
+# Properties
 ##########
 
 function isfull( v::Vector{Int}, k::Int )
@@ -173,7 +215,6 @@ function hasdescent!( d::Diagram, k::Int )
 
   fullinds = filter( j->isfull( findall(x->x==1,b[:,j]), k ), collect(1:size(b)[2]) )
 
-#  fullcols = [ b[:,j] for j in 1:size(b)[2] if isfull( findall(x->x==1,b[:,j]), k ) ]
   fullcols = [ b[:,j] for j in fullinds ]
   restcols = [ b[:,j] for j in setdiff( collect(1:size(b)[2]), fullinds) ]
 
@@ -207,146 +248,12 @@ function hasdescent!( d::Diagram, k::Int )
 
   d.m = hcat(fullcols..., v1, restcols... )
 
-#  nzr = findall( row -> any(row .!= 0), eachrow(d.m) )
-
-#  d.m = d.m[nzr,:]
-
   d.m = trimd(d.m)
 
   return true
 
 end
 
-
-function trimd( m::Matrix{Int8} )
-
-   while iszero( m[end,:] )
-     m = m[1:end-1,:]
-   end
-
-   nzc = findall( col -> any(col .!= 0), eachcol(m) )
-   m = m[:,nzc]
-
-   return m
-
-end
-
-
-function trimd!( d::Diagram )
-
-  d.m=trimd(d.m)
-
-  return d
-
-end
-
-
-function row_swap( m::Matrix{T}, k::Int ) where T
-
-  (a,b)=size(m)
-
-  if k>a || k<1
-    return m
-  elseif k==a
-    mm=vcat(m,zeros(Int8,1,b))
-  else
-    mm=deepcopy(m)
-  end
-
-  rows = vcat( [ mm[i,:] for i in 1:k-1 ], [mm[k+1,:]], [mm[k,:]], [mm[i,:] for i in k+2:a] )
-
-  mm = vcat([r' for r in rows]...)
-
-  return mm
-
-end
-
-
-function row_swap( d::Diagram, k::Int )
-
-  m=d.m
-
-  return Diagram( row_swap(m,k) )
-
-
-end
-
-
-function row_swap!( m::Matrix{T}, k::Int ) where T
-
-  (a,b)=size(m)
-
-  if k>a || k<1
-    return nothing
-  elseif k==a
-    m=vcat(m,zeros(T,1,b))
-  end
-
-  rows = vcat( [ m[i,:] for i in 1:k-1 ], [m[k+1,:]], [m[k,:]], [m[i,:] for i in k+2:a] )
-
-  m = vcat([r' for r in rows]...)
-
-  return m
-
-end
-
-
-function row_swap!( d::Diagram, k::Int )
-
-  m=row_swap!(d.m, k)
-
-  return(d)
-
-end
-
-
-
-function skop!( d::Diagram, k::Int )
-
-    if hasdescent!(d,k)
-      cols = [ d.m[:,j] for j in 1:size(d)[2] ]
-      jj=findfirst( x->(x[k]==1 && x[k+1:end]==zeros(Int8,length(x)-k)), cols )
-      d.m[k,jj]=0
-    end
-
-    row_swap!(d,k)
-
-end
-
-
-
-function skop( d::Diagram, k::Int )
-
-    if hasdescent!(d,k)
-      cols = [ d.m[:,j] for j in 1:size(d)[2] ]
-      jj=findfirst( x->(x[k]==1 && x[k+1:end]==zeros(Int8,length(x)-k)), cols )
-      mm=copy(d.m)
-      mm[k,jj]=0
-
-      mm = row_swap(mm,k)
-      return Diagram(mm)
-    else
-      return nothing
-    end
-
-end
-
-
-function rkop( d::Diagram, k::Int )
-# without swapping rows
-
-    if hasdescent!(d,k)
-      cols = [ d.m[:,j] for j in 1:size(d)[2] ]
-      jj=findfirst( x->(x[k]==1 && x[k+1:end]==zeros(Int8,length(x)-k)), cols )
-      mm=copy(d.m)
-      mm[k,jj]=0
-
-      return Diagram(mm)
-    else
-      return nothing
-    end
-
-end
 
 
 function isclear( d::Diagram )
@@ -386,8 +293,274 @@ function ismostlytransparent( d::Diagram )
 
 end
 
-# this version may be wonky, from Claude, but seems to work
-function generate_increasing_vectors(aa::Vector{Int})
+
+function descents( d::Diagram )
+# return list of descents of d
+
+  filter( k->hasdescent!(d,k), collect(1:size(d)[1]) )
+
+end
+
+
+############
+# Operations
+############
+
+function trimd( m::Matrix{Int8} )
+# remove final empty rows and all empty columns
+
+   while iszero( m[end,:] )
+     m = m[1:end-1,:]
+   end
+
+   nzc = findall( col -> any(col .!= 0), eachcol(m) )
+   m = m[:,nzc]
+
+   return m
+
+end
+
+function trimd( d::Diagram )
+# remove final empty rows and all empty columns
+
+  return Diagram( trimd(d.m) )
+
+end
+
+
+function trimd!( d::Diagram )
+# remove final empty rows and all empty columns, in place
+
+  d.m=trimd(d.m)
+
+  return d
+
+end
+
+
+
+function row_swap( d::Diagram, k::Int )
+# exchange rows k and k+1
+
+  m=d.m
+
+  return Diagram( row_swap(m,k) )
+
+
+end
+
+
+function row_swap( m::Matrix{T}, k::Int ) where T
+
+  (a,b)=size(m)
+
+  if k>a || k<1
+    return m
+  elseif k==a
+    mm=vcat(m,zeros(Int8,1,b))
+  else
+    mm=deepcopy(m)
+  end
+
+  rows = vcat( [ mm[i,:] for i in 1:k-1 ], [mm[k+1,:]], [mm[k,:]], [mm[i,:] for i in k+2:a] )
+
+  mm = vcat([r' for r in rows]...)
+
+  return mm
+
+end
+
+
+
+function row_swap!( d::Diagram, k::Int )
+# exchange rows k and k+1, in place
+
+  row_swap!(d.m, k)
+
+  return(d)
+
+end
+
+
+function row_swap!( m::Matrix{T}, k::Int ) where T
+
+  (a,b)=size(m)
+
+  if k>a || k<1
+    return nothing
+  elseif k==a
+    m=vcat(m,zeros(T,1,b))
+  end
+
+  rows = vcat( [ m[i,:] for i in 1:k-1 ], [m[k+1,:]], [m[k,:]], [m[i,:] for i in k+2:a] )
+
+  m = vcat([r' for r in rows]...)
+
+  return m
+
+end
+
+
+
+function skop( d::Diagram, k::Int )
+# perform s_k operation on diagram D
+
+    if hasdescent!(d,k)
+      cols = [ d.m[:,j] for j in 1:size(d)[2] ]
+      jj=findfirst( x->(x[k]==1 && x[k+1:end]==zeros(Int8,length(x)-k)), cols )
+      mm=copy(d.m)
+      mm[k,jj]=0
+
+      mm = row_swap(mm,k)
+      return Diagram(mm)
+    else
+      return nothing
+    end
+
+end
+
+
+
+function skop!( d::Diagram, k::Int )
+# do s_k operation in place
+
+    if hasdescent!(d,k)
+      cols = [ d.m[:,j] for j in 1:size(d)[2] ]
+      jj=findfirst( x->(x[k]==1 && x[k+1:end]==zeros(Int8,length(x)-k)), cols )
+      d.m[k,jj]=0
+    end
+
+    row_swap!(d,k)
+
+end
+
+
+
+function rkop( d::Diagram, k::Int )
+# remove box without swapping rows
+
+    if hasdescent!(d,k)
+      cols = [ d.m[:,j] for j in 1:size(d)[2] ]
+      jj=findfirst( x->(x[k]==1 && x[k+1:end]==zeros(Int8,length(x)-k)), cols )
+      mm=copy(d.m)
+      mm[k,jj]=0
+
+      return Diagram(mm)
+    else
+      return nothing
+    end
+
+end
+
+
+#############
+# Characters of (mostly) transparent diagrams
+#############
+
+
+function character( d::Diagram, R::ZZMPolyRing=xy_ring(size(d)[1]*size(d)[2])[1].ring )
+# character of a mostly transparent diagram, using recursion
+
+  if iszero( d.m )
+    return R(1)
+  end
+
+  # for single-column diagrams, use single-column method
+  if size( trimd(d.m) )[2]==1 
+     dmt=reshape( trimd(d.m), : )
+     aa = findall( x->x==1, dmt )
+     return character(aa,R)
+  end
+  #
+
+  # check diagram is mostly transparent, otherwise recursion does not work
+  if !ismostlytransparent(d) 
+     throw(ArgumentError("diagram is not mostly transparent"))
+  end
+  #
+
+  des = descents( d )
+
+  p1 = R(0)
+
+  x = gens(R)
+
+  # sum over descents
+  for k in des
+       p1 = p1 + x[k]*Rop( character( skop(d,k), R ), k+1, R )
+  end
+
+  # apply 1/(1-R1)
+  p = p1
+  for k in 1:maxvar(p1)
+    p1 = Rop( p1, 1, R )
+    p = p + p1
+  end
+
+  return p
+end
+
+
+function character( aa::Vector{Int}, R::ZZMPolyRing=xy_ring(maximum(aa))[1].ring )
+# character of single-column diagram, from basis
+
+  exps = all_bb_less_than(aa)
+
+  p=R(0)
+  x=gens(R)
+  for bb in exps
+    tt=R(1)
+    for i in 1:length(bb)
+      tt = tt*x[bb[i]]
+    end
+    p = p + tt
+  end
+
+  return p
+    
+end
+
+
+function Rop( p::ZZMPolyRingElem, k::Int, R::ZZMPolyRing=parent(p) )
+# Bergeron-Sottile operator
+
+  x = gens(R)
+  n = length(x)
+
+  if k>n || k<1
+    return p
+  end
+
+  p1 = evaluate( p, [ x[k] ], [0] )
+
+  for i in k+1:n
+    p1 = evaluate( p1, [x[i]], [x[i-1]] )
+  end
+
+  return p1
+
+end
+
+
+
+function Top( p::ZZMPolyRingElem, k::Int, R::ZZMPolyRing=parent(p) )
+# Nadeau-Spink-Tewari trimming operator
+
+  x = gens(R)
+  n = length(x)
+
+  if k>n || k<1
+    return 0
+  end
+
+  p1 = Rop(p,k+1,R) - Rop(p,k,R)
+
+  return( p1/x[k] )
+  
+end
+
+
+function all_bb_less_than(aa::Vector{Int})
     # Check if all elements are positive
     @assert all(a -> a > 0, aa) "All elements must be positive integers"
     # Check if input vector is strictly increasing
@@ -413,241 +586,3 @@ function generate_increasing_vectors(aa::Vector{Int})
     return result
 end
 
-
-function mult( d::Diagram, m::Int )
-  b=repeat( d.m, inner=(1,m) )
-
-  return Diagram(b)
-
-end
-
-
-
-function descents( d::Diagram )
-
-  filter( k->hasdescent!(d,k), collect(1:size(d)[1]) )
-
-end
-
-
-function character( d::Diagram, R::ZZMPolyRing=xy_ring(size(d)[1]*size(d)[2])[1].ring )
-
-  if iszero( d.m )
-    return R(1)
-  end
-
-  #
-  if size( trimd(d.m) )[2]==1 
-     dmt=reshape( trimd(d.m), : )
-     aa = findall( x->x==1, dmt )
-     return character(aa,R)
-  end
-  #
-
-  #
-  if !ismostlytransparent(d) println("warning: not mostly transparent") end
-  #
-
-  des = descents( d )
-
-  p1 = R(0)
-
-  x = gens(R)
-
-  for k in des
-#    while k<=length(x)
-       p1 = p1 + x[k]*Rop( character( skop(d,k), R ), k+1, R )
-#    end
-  end
-
-  p = p1
-  for k in 1:maxvar(p1)
-    p1 = Rop( p1, 1, R )
-    p = p + p1
-  end
-
-  return p
-end
-
-
-function character( aa::Vector{Int}, R::ZZMPolyRing=xy_ring(maximum(aa))[1].ring )
-
-  exps = generate_increasing_vectors(aa)
-
-  p=R(0)
-  x=gens(R)
-  for bb in exps
-    tt=R(1)
-    for i in 1:length(bb)
-      tt = tt*x[bb[i]]
-    end
-    p = p + tt
-  end
-
-  return p
-    
-end
-
-
-function Rop( p::ZZMPolyRingElem, k::Int, R::ZZMPolyRing=parent(p) )
-
-  x = gens(R)
-  n = length(x)
-
-  if k>n || k<1
-    return p
-  end
-
-  p1 = evaluate( p, [ x[k] ], [0] )
-
-  for i in k+1:n
-    p1 = evaluate( p1, [x[i]], [x[i-1]] )
-  end
-
-  return p1
-
-end
-
-
-
-function Top( p::ZZMPolyRingElem, k::Int, R::ZZMPolyRing=parent(p) )
-
-  x = gens(R)
-  n = length(x)
-
-  if k>n || k<1
-    return 0
-  end
-
-  p1 = Rop(p,k+1,R) - Rop(p,k,R)
-
-  return( p1/x[k] )
-  
-end
-
-
-function mRop( p::ZZMPolyRingElem, k::Int, m::Int, R::ZZMPolyRing=parent(p) )
-
-  p1=p
-  for i in 1:m
-    p1=Rop(p1,k,R)
-  end
-
-  return p1
-
-end
-
-#=
-function mcharacter( d::Diagram, m::Int, R::ZZMPolyRing=xy_ring(m*m*size(d)[1]*size(d)[2])[1].ring )
-# not working, need to rethink recursion for m>1
-
-  if iszero( d.m )
-    return R(1)
-  end
-
-  des = descents( d )
-
-  p1 = R(0)
-
-  x = gens(R)
-
-  for k in des
-
-#       p1 = p1 + sum(x[m*(k-1)+1:m*k])*mRop( mcharacter( skop(d,k), m, R ), k+1, m, R )
-       p1 = p1 + x[m*(k-1)+1]*mRop( mcharacter( skop(d,k), m, R ), k+1, m, R )
-
-  end
-
-  p = p1
-  for k in 1:maxvar(p1)
-    p1 = mRop( p1, 1,m, R )
-    p = p + p1
-  end
-
-  return p
-end
-=#
-
-########
-# test some guesses
-
-function check_div_diff( d::Diagram )
-
-#=
-  if !isclear(d)
-    println("not clear")
-    return false
-  end
-=#
-
-  des = descents(d)
-
-  p=character(d)
-  R=parent(p)
-
-  for k in des
-
-    dk=skop(d,k)
-    pk=character(dk,R)
-
-    if Rop( pk, k+1, R) != Top( p, k, R )
-#    if pk != Rop( ddx(p,k,R), k+1, R )
-#    if pk != ddx(p,k,R)
-      println(k)
-      return false
-    end
-  end
-  return true
-
-end
-
-
-function check_all_dd( n::Int, m::Int )
-
-  perms = permutations(1:n)
-  bv = true
-
-  for w in perms
-    d=Diagram(w)
-    dm=mult(d,m)
-    if !check_div_diff(dm)
-      bv=false
-      println(w)
-    end
-  end
-  return bv
-end
-
-
-function check_rothe_transparent( n::Int, m::Int )
-
-  perms = permutations(1:n)
-
-  for w in perms
-    d=Diagram(w)
-    dm = mult(d,m)
-    if !istransparent(dm)
-      println(w)
-      return dm
-    end
-  end
-
- return true
-end
-
-# not used
-
-#= 
-function _fullsort( d::Diagram, k::Int )
-
-  b=d.m
-
-  fullcols = [ b[:,j] for j in 1:size(b)[2] if isfull( findall(x->x==1,b[:,j]), k ) ]
-  restcols = setdiff( [ b[:,j] for j in 1:size(b)[2] ], fullcols )
-
-  b=hcat( fullcols..., restcols... )
-
-  return Diagram( b )
-
-end
-=#
