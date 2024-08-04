@@ -9,5 +9,84 @@ To use it, make sure the file is where Julia can find it, say in your current wo
 julia> using SchubertPolynomials
 julia> include("schubmods.jl")
 ```
-Examples of diagrams and characters will be given below.  (Soon!)
 
+##Examples
+
+There are several ways to contruct a diagram.  A basic one is by specifying positions (in matrix coordinates).
+```julia-repl
+julia> pos = [ (1,1), (1,2), (2,3) ];
+
+julia> d = Diagram(pos)
+
+ □ □ . 
+ . . □ 
+```
+One can also get the Rothe diagram of a permutation.
+```julia-repl
+julia> w = [1,4,6,2,5,3];
+
+julia> dw = Diagram(w)
+
+ . . . . . 
+ . □ □ . . 
+ . □ □ . □ 
+ . . . . . 
+ . . □ . . 
+```
+The *descents* of a diagram `d` are the row indices where `d` satisfies a certain property.  The definition is motivated by requiring `Diagram(w)` to have descents equal to the (right) descents of `w`.
+```julia-repl
+julia> descents(dw)
+2-element Vector{Int64}:
+ 3
+ 5
+```
+*Warning: the internal function `hasdescents!` mutates the diagram, so `d` may look different after calling `descents`.  The intended applications are insensitive to permutations of columns, though.*
+
+If `k` is a descent of `d`, the function `skop(d,k)` removes a certain box in row `k` and swaps rows `k` and `k+1`.  When `d` is the Rothe diagram of `w`, the result is the Rothe diagram of `ws_k`.
+```julia-repl
+julia> dw3=skop(dw,3)
+
+ . . . 
+ □ □ . 
+ . . . 
+ . □ □ 
+ . □ . 
+
+
+julia> w3=[1,4,2,6,5,3];
+
+julia> Diagram(w3)
+
+ . . . . . 
+ . □ □ . . 
+ . . . . . 
+ . . □ . □ 
+ . . □ . . 
+```
+The function `trimd` removes empty columns.
+```julia-repl
+julia> trimd(Diagram(w3))==dw3
+true
+```
+It can happen that `k` is still a descent of `skop(d,k)` (though not for Rothe diagrams).
+```
+julia> d
+
+ . □ □ 
+ □ . . 
+
+julia> descents(d)
+2-element Vector{Int64}:
+ 1
+ 2
+
+julia> d1=skop(d,1)
+
+ □ . . 
+ . . □ 
+
+julia> d11=skop(d1,1)
+
+ □ . 
+ . . 
+```
