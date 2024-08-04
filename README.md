@@ -10,7 +10,7 @@ julia> using SchubertPolynomials
 julia> include("schubmods.jl")
 ```
 
-##Examples
+## Examples
 
 There are several ways to contruct a diagram.  A basic one is by specifying positions (in matrix coordinates).
 ```julia-repl
