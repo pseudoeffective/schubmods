@@ -33,6 +33,17 @@ julia> dw = Diagram(w)
  . . . . . 
  . . □ . . 
 ```
+The function `mult(d,m)` repeats each column of `d`.
+```julia-repl
+julia> mult(dw,3)
+
+ . . . . . . . . . . . . . . . 
+ . . . □ □ □ □ □ □ . . . . . . 
+ . . . □ □ □ □ □ □ . . . □ □ □ 
+ . . . . . . . . . . . . . . . 
+ . . . . . . □ □ □ . . . . . . 
+```
+
 The *descents* of a diagram `d` are the row indices where `d` satisfies a certain property.  The definition is motivated by requiring `Diagram(w)` to have descents equal to the (right) descents of `w`.
 ```julia-repl
 julia> descents(dw)
@@ -91,9 +102,9 @@ julia> d11=skop(d1,1)
  . . 
 ```
 
-A diagram is *mostly transparent* if it satisfies a certain recursively defined property.  For mostly transparent diagrams, the function `character` computes the character of the corresponding flagged Schur module.
+A diagram is *translucent* if it satisfies a certain recursively defined property; translucent diagrams include all Rothe diagrams of permutations, as well as some more.  For translucent diagrams, the function `character` computes the character of the corresponding flagged Schur module.
 ```julia-repl
-julia> ismostlytransparent(d)
+julia> istranslucent(d)
 true
 
 julia> character(d)
