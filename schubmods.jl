@@ -473,13 +473,14 @@ function character( d::Diagram, R::ZZMPolyRing=xy_ring(size(d)[1]*size(d)[2])[1]
   end
   #
 
+  des = descents( d )
+
   # check diagram is translucent, otherwise recursion does not work
-  if !istranslucent(d) 
+  notdescent = [ i for i in 1:size(d)[1] if !(i in des) ]
+  if !all( k-> isfull(d,k), notdescent )
      throw(ArgumentError("diagram is not translucent"))
   end
-  #
-
-  des = descents( d )
+  # (note: the above checks d is clear, and will be done at each step of the recursion)
 
   p1 = R(0)
 
@@ -491,13 +492,7 @@ function character( d::Diagram, R::ZZMPolyRing=xy_ring(size(d)[1]*size(d)[2])[1]
   end
 
   # apply 1/(1-R1)
-  p = p1
-  for k in 1:maxvar(p1)
-    p1 = Rop( p1, 1, R )
-    p = p + p1
-  end
-
-  return p
+  return Zop(p1,R)
 end
 
 
@@ -558,6 +553,28 @@ function Top( p::ZZMPolyRingElem, k::Int, R::ZZMPolyRing=parent(p) )
   return( p1/x[k] )
   
 end
+
+
+function Zop( p::ZZMPolyRingElem, R::ZZMPolyRing=parent(p) )
+# Nadeau-Spink-Tewari 1/(1-R1) operator
+
+  x = gens(R)
+  n = length(x)
+
+  if n<1 return 0 end
+
+  p1 = p
+
+  for k in 1:maxvar(p1)
+    p1 = Rop( p1, 1, R )
+    p = p + p1
+  end
+
+  return p
+  
+end
+
+
 
 
 function all_bb_less_than(aa::Vector{Int})
