@@ -72,8 +72,8 @@ It can happen that `k` is still a descent of `skop(d,k)` (though not for Rothe d
 ```
 julia> d
 
- . □ □ 
- □ . . 
+ □ □ . 
+ . . □ 
 
 julia> descents(d)
 2-element Vector{Int64}:
