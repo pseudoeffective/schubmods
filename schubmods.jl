@@ -278,15 +278,15 @@ function istransparent( d::Diagram )
 end
 
 
-function ismostlytransparent( d::Diagram )
-# any single-column diagram is mostly transparent
+function istranslucent( d::Diagram )
+# any single-column diagram is translucent
 
   if iszero( d.m ) return true end
   if size( trimd(d.m) )[2]==1 return true end
   if !isclear( d ) return false end
 
   for k in descents(d)
-    if !ismostlytransparent(skop(d,k)) return false end
+    if !istranslucent(skop(d,k)) return false end
   end
 
   return true
@@ -454,12 +454,12 @@ end
 
 
 #############
-# Characters of (mostly) transparent diagrams
+# Characters of translucent diagrams
 #############
 
 
 function character( d::Diagram, R::ZZMPolyRing=xy_ring(size(d)[1]*size(d)[2])[1].ring )
-# character of a mostly transparent diagram, using recursion
+# character of a translucent diagram, using recursion
 
   if iszero( d.m )
     return R(1)
@@ -473,9 +473,9 @@ function character( d::Diagram, R::ZZMPolyRing=xy_ring(size(d)[1]*size(d)[2])[1]
   end
   #
 
-  # check diagram is mostly transparent, otherwise recursion does not work
-  if !ismostlytransparent(d) 
-     throw(ArgumentError("diagram is not mostly transparent"))
+  # check diagram is translucent, otherwise recursion does not work
+  if !istranslucent(d) 
+     throw(ArgumentError("diagram is not translucent"))
   end
   #
 
