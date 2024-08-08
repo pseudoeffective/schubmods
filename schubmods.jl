@@ -302,6 +302,29 @@ function descents( d::Diagram )
 end
 
 
+
+function reduced_words( d::Diagram )
+# return list of reduced words of d
+
+  if iszero( d.m ) return Vector{Int}[[]] end
+
+  if !isclear(d)
+     throw(ArgumentError("d is not transparent"))
+  end
+
+  rw = Vector{Int}[]
+
+  for k in descents(d)
+    dk = skop(d,k)
+    rwk = reduced_words(dk)
+    push!.(rwk,k)
+    rw = vcat(rw,rwk)
+  end
+
+  return rw
+end
+
+
 ############
 # Operations
 ############
