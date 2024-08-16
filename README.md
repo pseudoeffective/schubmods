@@ -54,6 +54,15 @@ julia> descents(dw)
 
 If `k` is a descent of `d`, the function `skop(d,k)` removes a certain *border cell* in row `k` and swaps rows `k` and `k+1`.  When `d` is the Rothe diagram of `w`, the result is the Rothe diagram of `ws_k`.
 ```julia-repl
+# recall w = [1,4,6,2,5,3]
+julia> dw
+
+ . . . . . 
+ . □ □ . . 
+ . □ □ . □ 
+ . . . . . 
+ . . □ . . 
+
 julia> dw3=skop(dw,3)
 
  . . . . . 
