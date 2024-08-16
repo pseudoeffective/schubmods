@@ -51,28 +51,22 @@ julia> descents(dw)
  3
  5
 ```
-*Warning: the internal function `hasdescents!` mutates the diagram, so `d` may look different after calling `descents`.  The intended applications are insensitive to permutations of columns, though.*
 
-If `k` is a descent of `d`, the function `skop(d,k)` removes a certain box in row `k` and swaps rows `k` and `k+1`.  When `d` is the Rothe diagram of `w`, the result is the Rothe diagram of `ws_k`.
+If `k` is a descent of `d`, the function `skop(d,k)` removes a certain *border cell* in row `k` and swaps rows `k` and `k+1`.  When `d` is the Rothe diagram of `w`, the result is the Rothe diagram of `ws_k`.
 ```julia-repl
 julia> dw3=skop(dw,3)
-
- . . . 
- □ □ . 
- . . . 
- . □ □ 
- . □ . 
-
-
-julia> w3=[1,4,2,6,5,3];
-
-julia> Diagram(w3)
 
  . . . . . 
  . □ □ . . 
  . . . . . 
  . . □ . □ 
  . . □ . . 
+
+
+julia> w3=[1,4,2,6,5,3];
+
+julia> Diagram(w3)==dw3
+true
 ```
 The function `trimd` removes empty columns.
 ```julia-repl
@@ -93,13 +87,13 @@ julia> descents(d)
 
 julia> d1=skop(d,1)
 
- □ . . 
  . . □ 
+ . □ . 
 
 julia> d11=skop(d1,1)
 
- □ . 
- . . 
+ . □ . 
+ . . . 
 ```
 
 A diagram is *translucent* if it satisfies a certain recursively defined property; translucent diagrams include all Rothe diagrams of permutations, as well as some more.  For translucent diagrams, the function `character` computes the character of the corresponding flagged Schur module.
