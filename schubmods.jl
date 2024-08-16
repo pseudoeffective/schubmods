@@ -203,6 +203,11 @@ function does_contain( v1::Vector{Int}, v2::Vector{Int} )
 
 end
 
+function does_strictly_contain( v1::Vector{Int}, v2::Vector{Int} )
+
+  all( x -> x in v1, v2 ) && v1!=v2
+
+end
 
 
 function hasdescent!( d::Diagram, k::Int )
@@ -255,11 +260,65 @@ function hasdescent!( d::Diagram, k::Int )
 end
 
 
+# rewrite so as not to mutate d
+function hasdescent( d::Diagram, k::Int )
+
+  b=d.m
+
+  if k==size(d.m)[1]
+    b=vcat(d.m,zeros(Int8,1,size(d.m)[2]))
+  end
+
+  fullinds = filter( j->isfull( findall(x->x==1,b[:,j]), k ), collect(1:size(b)[2]) )
+  restinds = setdiff( collect(1:size(b)[2]), fullinds)
+
+  # list the full columns
+  fullcols = [ b[:,j] for j in fullinds ]
+  # list the rest of the columns
+  restcols = [ b[:,j] for j in restinds ]
+
+  filter!( !iszero, fullcols )
+
+  # chop off the entries below row k
+  restcolsk = [ v[1:k+1] for v in restcols ]
+  restcolsk = [ findall( x->x==1, v ) for v in restcolsk ]
+
+  # make sure the entries row k and above are sorted by containment
+  ww = sortperm( restcolsk, lt=does_strictly_contain )
+  restcolsk = restcolsk[ww]
+  restcols = restcols[ww]
+
+  # find a column which stops at row k, for potential border cell
+  ii=findfirst( x->x[k+1:end]==zeros(Int8,length(x)-k), restcols )
+
+  if ii==nothing
+    return false, (0,0)
+  else
+    v1=restcols[ii]
+    v1k=restcolsk[ii]
+  end
+
+
+  restcols = vcat( restcols[1:ii-1], restcols[ii+1:end] )
+  restcolsk = vcat( restcolsk[1:ii-1], restcolsk[ii+1:end] )
+
+  for v in restcolsk
+    if !does_contain( v1k, v ) || v[end]>k
+      return false, (0,0)
+    end
+  end
+
+  bc = (k,restinds[ ww[ii] ])
+  return true,bc
+
+end
+
+
 
 function isclear( d::Diagram )
 
   n=size(d)[1]
-  all( k -> ( isfull(d,k) || hasdescent!(d,k) ), 1:n )
+  all( k -> ( isfull(d,k) || hasdescent(d,k)[1] ), 1:n )
 
 end
 
@@ -297,7 +356,7 @@ end
 function descents( d::Diagram )
 # return list of descents of d
 
-  filter( k->hasdescent!(d,k), collect(1:size(d)[1]) )
+  filter( k->hasdescent(d,k)[1], collect(1:size(d)[1]) )
 
 end
 
@@ -427,12 +486,11 @@ end
 
 function skop( d::Diagram, k::Int )
 # perform s_k operation on diagram D
-
-    if hasdescent!(d,k)
-      cols = [ d.m[:,j] for j in 1:size(d)[2] ]
-      jj=findfirst( x->(x[k]==1 && x[k+1:end]==zeros(Int8,length(x)-k)), cols )
+    hd,bc=hasdescent(d,k)
+    if hd
+      (i,j)=bc
       mm=copy(d.m)
-      mm[k,jj]=0
+      mm[i,j]=0
 
       mm = row_swap(mm,k)
       return Diagram(mm)
@@ -462,10 +520,11 @@ end
 function rkop( d::Diagram, k::Int )
 # remove box without swapping rows
 
-    if hasdescent!(d,k)
-      cols = [ d.m[:,j] for j in 1:size(d)[2] ]
+    hd,b=hasdescent(d,k)
+    if hd
+      cols = [ b[:,j] for j in 1:size(b)[2] ]
       jj=findfirst( x->(x[k]==1 && x[k+1:end]==zeros(Int8,length(x)-k)), cols )
-      mm=copy(d.m)
+      mm=copy(b)
       mm[k,jj]=0
 
       return Diagram(mm)
