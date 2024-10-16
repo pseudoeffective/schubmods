@@ -55,7 +55,7 @@ Base.:(==)( d1::Diagram, d2::Diagram ) = d1.m == d2.m
 # Constructors
 ##################
 
-function Diagram( b::Vector{Int8} )
+function Diagram( b::Union{Vector{Int8},BitVector} )
 # if there is just one column, given as 01 vector
 
   m = reshape( b, :, 1 )
