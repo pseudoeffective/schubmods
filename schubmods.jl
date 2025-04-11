@@ -1,13 +1,13 @@
 # Constructors and methods for Diagrams and Schubert modules
 #
-# Dave Anderson, July 2024
+# Dave Anderson, March 2025
 
 
 ############################
 
 mutable struct Diagram
 
-  m::Matrix{Int8}
+  m::BitMatrix
 
 end
 
@@ -16,7 +16,7 @@ end
 # Extend basic functions for Diagrams
 ######################################
 
-function int_to_symb(i::Int8)
+function int_to_symb(i::Union{Int8,Bool})
     symbols = ['.', "\u25A1",  # "□"
     ]
     return symbols[i+1]
@@ -69,12 +69,12 @@ function Diagram( pos::Vector{Tuple{Int,Int}} )
 # specify the positions of boxes in matrix coordinates
 
   if isempty(pos)
-    return Diagram( zeros(Int8,0,0) )
+    return Diagram( BitMatrix( zeros(Bool,0,0) ) )
   end
 
   a = maximum(first.(pos))
   b = maximum(last.(pos))
-  m = zeros(Int8,a,b)
+  m = BitMatrix( zeros(Bool,a,b) )
 
   for (i,j) in pos
     m[i,j]=1
@@ -142,8 +142,7 @@ end
 
 function random_diagram( a::Int, b::Int )
 
-  m = rand(Bool,a,b)
-  m = Int8.(m)
+  m = rand(BitMatrix,a,b)
 
   d = Diagram(m)
 
@@ -213,7 +212,7 @@ end
 function hasdescent!( d::Diagram, k::Int )
 
   if k==size(d.m)[1]
-    d.m=vcat(d.m,zeros(Int8,1,size(d.m)[2]))
+    d.m=vcat(d.m, BitMatrix( zeros(Int8,1,size(d.m)[2]) ))
   end
 
   b=d.m
@@ -232,7 +231,7 @@ function hasdescent!( d::Diagram, k::Int )
   restcolsk = restcolsk[ww]
   restcols=restcols[ww]
 
-  ii=findfirst( x->x[k+1:end]==zeros(Int8,length(x)-k), restcols )
+  ii=findfirst( x->x[k+1:end]==BitVector( zeros(Int8,length(x)-k) ), restcols )
 
   if ii==nothing
     return false
@@ -266,7 +265,7 @@ function hasdescent( d::Diagram, k::Int )
   b=d.m
 
   if k==size(d.m)[1]
-    b=vcat(d.m,zeros(Int8,1,size(d.m)[2]))
+    b=vcat(d.m,BitMatrix( zeros(Int8,1,size(d.m)[2]) ))
   end
 
   fullinds = filter( j->isfull( findall(x->x==1,b[:,j]), k ), collect(1:size(b)[2]) )
@@ -289,7 +288,7 @@ function hasdescent( d::Diagram, k::Int )
   restcols = restcols[ww]
 
   # find a column which stops at row k, for potential border cell
-  ii=findfirst( x->x[k+1:end]==zeros(Int8,length(x)-k), restcols )
+  ii=findfirst( x->x[k+1:end]==BitVector( zeros(Int8,length(x)-k) ), restcols )
 
   if ii==nothing
     return false, (0,0)
@@ -388,7 +387,7 @@ end
 # Operations
 ############
 
-function trimd( m::Matrix{Int8} )
+function trimd( m::BitMatrix )
 # remove final empty rows and all empty columns
 
    while iszero( m[end,:] )
@@ -439,7 +438,7 @@ function row_swap( m::Matrix{T}, k::Int ) where T
   if k>a || k<1
     return m
   elseif k==a
-    mm=vcat(m,zeros(Int8,1,b))
+    mm=vcat(m,zeros(T,1,b) )
   else
     mm=deepcopy(m)
   end
@@ -452,6 +451,25 @@ function row_swap( m::Matrix{T}, k::Int ) where T
 
 end
 
+function row_swap( m::BitMatrix, k::Int )
+
+  (a,b)=size(m)
+
+  if k>a || k<1
+    return m
+  elseif k==a
+    mm=vcat(m,BitMatrix( zeros(Int8,1,b) ))
+  else
+    mm=deepcopy(m)
+  end
+
+  rows = vcat( [ mm[i,:] for i in 1:k-1 ], [mm[k+1,:]], [mm[k,:]], [mm[i,:] for i in k+2:a] )
+
+  mm = vcat([r' for r in rows]...)
+
+  return mm
+
+end
 
 
 function row_swap!( d::Diagram, k::Int )
@@ -483,6 +501,23 @@ function row_swap!( m::Matrix{T}, k::Int ) where T
 end
 
 
+function row_swap!( m::BitMatrix, k::Int )
+
+  (a,b)=size(m)
+
+  if k>a || k<1
+    return nothing
+  elseif k==a
+    m=vcat(m,BitMatrix(zeros(Bool,1,b)))
+  end
+
+  rows = vcat( [ m[i,:] for i in 1:k-1 ], [m[k+1,:]], [m[k,:]], [m[i,:] for i in k+2:a] )
+
+  m = vcat([r' for r in rows]...)
+
+  return m
+
+end
 
 function skop( d::Diagram, k::Int )
 # perform s_k operation on diagram D
@@ -507,7 +542,7 @@ function skop!( d::Diagram, k::Int )
 
     if hasdescent!(d,k)
       cols = [ d.m[:,j] for j in 1:size(d)[2] ]
-      jj=findfirst( x->(x[k]==1 && x[k+1:end]==zeros(Int8,length(x)-k)), cols )
+      jj=findfirst( x->(x[k]==1 && x[k+1:end]==BitVector( zeros(Int8,length(x)-k) )), cols )
       d.m[k,jj]=0
     end
 
@@ -523,7 +558,7 @@ function rkop( d::Diagram, k::Int )
     hd,b=hasdescent(d,k)
     if hd
       cols = [ b[:,j] for j in 1:size(b)[2] ]
-      jj=findfirst( x->(x[k]==1 && x[k+1:end]==zeros(Int8,length(x)-k)), cols )
+      jj=findfirst( x->(x[k]==1 && x[k+1:end]==BitVector( zeros(Int8,length(x)-k) )), cols )
       mm=copy(b)
       mm[k,jj]=0
 
@@ -532,6 +567,24 @@ function rkop( d::Diagram, k::Int )
       return nothing
     end
 
+end
+
+
+function boxcomp( d::Diagram, (a,b)::Tuple{Int,Int}=size(d) )
+# return complement of d in a-by-b rectangle
+  if a<size(d)[1] || b<size(d)[2]
+    throw(ArgumentError("box smaller than diagram"))
+  end
+
+  bb=deepcopy(d.m)
+
+  bb=vcat( bb, BitMatrix( zeros(Bool,a-size(d)[1], size(d)[2]) ) )
+
+  bb=hcat( bb, BitMatrix( zeros(Bool, a, b-size(d)[2]) ) )
+
+  bb=.!bb
+
+  return(Diagram(bb))
 end
 
 
